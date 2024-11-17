@@ -366,7 +366,10 @@ function install_build_tools() {
         rm -rf kernel-headers.rpm
     fi
 
-    wget --no-check-certificate https://cmake.org/files/v3.22/cmake-3.22.0-linux-x86_64.sh -O cmake_pkg.sh
+    # CPU Architecture: x86_64 aarch64
+    local CPU_ARCH=$(lscpu | grep Architecture | awk '{print $2}')
+
+    wget --no-check-certificate https://cmake.org/files/v3.22/cmake-3.22.1-linux-${CPU_ARCH}.sh -O cmake_pkg.sh
     bash cmake_pkg.sh --prefix=/usr/ --exclude-subdir && rm -rf cmake_pkg.sh
 }
 
@@ -375,6 +378,13 @@ function build_ssr_native() {
     cd shadowsocksr-native
     git submodule update --init
     git submodule foreach -q 'git checkout $(git config -f $toplevel/.gitmodules submodule.$name.branch || echo master)'
+
+    if [[ "${ID}" == "centos" ]]; then
+        # try to fix bug #231
+        cd depends/libuv
+        git checkout 71932a9fc9e234b3ebac90de0dd061fb00ba191b
+        cd ../..
+    fi
 
     # build ShadowsocksR-native
     cmake . && make
